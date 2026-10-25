@@ -14,6 +14,16 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
         <input value={settings.username} onChange={(e) => onChange({ ...settings, username: e.target.value.trim() })} />
       </label>
       <label>
+        Training hours per day
+        <select value={settings.hoursPerDay} onChange={(e) => onChange({ ...settings, hoursPerDay: Number(e.target.value) })}>
+          {[1, 1.5, 2, 3, 4, 5, 6].map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
         Months to fetch
         <input
           type="number"
@@ -35,7 +45,7 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
         </select>
       </label>
       <p className="muted small">
-        Depth applies to new analyses. Re-analyze a game to refresh it. Everything is stored in this browser (IndexedDB).
+        Depth applies to new analyses. Everything is stored in this browser only.
       </p>
       <button onClick={onClose}>Done</button>
     </section>

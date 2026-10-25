@@ -72,9 +72,9 @@ export default function Board({ fen, orientation, arrows, onMove, highlight }: P
         autoPromoteToQueen
         animationDuration={180}
         customSquareStyles={styles}
-        customBoardStyle={{ borderRadius: '10px', boxShadow: '0 20px 50px rgba(0,0,0,0.45)' }}
-        customDarkSquareStyle={{ backgroundColor: '#6f8f72' }}
-        customLightSquareStyle={{ backgroundColor: '#e8e4d0' }}
+        customBoardStyle={{ borderRadius: '12px', boxShadow: '0 4px 18px rgba(31,35,40,0.14)' }}
+        customDarkSquareStyle={{ backgroundColor: '#7f9c82' }}
+        customLightSquareStyle={{ backgroundColor: '#eeebdc' }}
       />
     </div>
   );

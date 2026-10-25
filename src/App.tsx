@@ -2,20 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { analyzeGame } from './lib/analyze';
 import { fetchArchives, fetchMonth } from './lib/chesscom';
 import { getEngine } from './lib/engine';
-import { log, type Progress, EMPTY_PROGRESS } from './lib/progress';
+import type { BlockId } from './lib/curriculum';
+import { log, toggleBlock, type Progress, EMPTY_PROGRESS } from './lib/progress';
 import { dueCards, grade, syncCards } from './lib/quiz';
 import * as store from './lib/store';
 import type { AnalyzedGame, QuizAttempt, QuizCard, RawGame, Settings } from './lib/types';
 import { DEFAULT_SETTINGS } from './lib/types';
 import GamesView from './components/GamesView';
 import GameView from './components/GameView';
-import HomeView from './components/HomeView';
-import InsightsView from './components/InsightsView';
+import MethodView from './components/MethodView';
+import ProgressView from './components/ProgressView';
 import SettingsPanel from './components/SettingsPanel';
+import TodayView from './components/TodayView';
 import TrainView, { type TrainMode } from './components/TrainView';
 
-type Tab = 'home' | 'games' | 'train' | 'insights';
-const TOURNAMENT = new Date('2026-12-29T09:00:00+05:30');
+export type Tab = 'today' | 'games' | 'train' | 'progress' | 'method';
 const AUTO_ANALYZE = 10;
 
 export interface Job {
@@ -25,10 +26,11 @@ export interface Job {
 }
 
 const NAV: { id: Tab; label: string; icon: string }[] = [
-  { id: 'home', label: 'Coach HQ', icon: '♚' },
-  { id: 'train', label: 'Train', icon: '♞' },
-  { id: 'insights', label: 'Insights', icon: '◎' },
-  { id: 'games', label: 'Games', icon: '☰' },
+  { id: 'today', label: 'Today', icon: '♔' },
+  { id: 'games', label: 'My games', icon: '♙' },
+  { id: 'train', label: 'Drills', icon: '♘' },
+  { id: 'progress', label: 'Progress', icon: '♖' },
+  { id: 'method', label: 'The method', icon: '♗' },
 ];
 
 export default function App() {
@@ -38,7 +40,7 @@ export default function App() {
   const [cards, setCards] = useState<Record<string, QuizCard>>({});
   const [progress, setProgress] = useState<Progress>(EMPTY_PROGRESS);
   const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState<Tab>('home');
+  const [tab, setTab] = useState<Tab>('today');
   const [openGame, setOpenGame] = useState<string | null>(null);
   const [trainMode, setTrainMode] = useState<TrainMode | null>(null);
   const [retryCard, setRetryCard] = useState<string | null>(null);
@@ -47,7 +49,6 @@ export default function App() {
   const [queue, setQueue] = useState<string[]>([]);
   const [job, setJob] = useState<Job | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const booted = useRef(false);
 
@@ -133,27 +134,37 @@ export default function App() {
     abortRef.current?.abort();
   };
 
-  const updateAnalysis = useCallback(async (a: AnalyzedGame) => {
-    await store.saveAnalysis(a);
-    setAnalyses((xs) => xs.map((x) => (x.id === a.id ? a : x)));
+  /** Applies f to the latest copy of the game, so quick successive edits never overwrite each other. */
+  const updateAnalysis = useCallback((id: string, f: (g: AnalyzedGame) => AnalyzedGame) => {
+    setAnalyses((xs) =>
+      xs.map((x) => {
+        if (x.id !== id) return x;
+        const next = f(x);
+        store.saveAnalysis(next);
+        return next;
+      }),
+    );
   }, []);
 
-  const onTrainResult = useCallback((card: QuizCard, attempt: QuizAttempt, xp: number, mode: TrainMode) => {
-    setCards((c) => {
-      const next = { ...c, [card.id]: grade(c[card.id] ?? card, attempt) };
-      store.saveQuiz(next);
-      return next;
-    });
+  const updateProgress = useCallback((f: (p: Progress) => Progress) => {
     setProgress((p) => {
-      const next = log(p, mode === 'puzzles' ? { puzzles: 1, solved: attempt.hitBest ? 1 : 0, xp } : { think: 1, xp });
+      const next = f(p);
       store.saveProgress(next);
       return next;
     });
-    if (xp >= 10) {
-      setToast(`+${xp} XP`);
-      setTimeout(() => setToast(null), 1400);
-    }
   }, []);
+
+  const onTrainResult = useCallback(
+    (card: QuizCard, attempt: QuizAttempt, mode: TrainMode) => {
+      setCards((c) => {
+        const next = { ...c, [card.id]: grade(c[card.id] ?? card, attempt) };
+        store.saveQuiz(next);
+        return next;
+      });
+      updateProgress((p) => log(p, mode === 'puzzles' ? { drills: 1, solved: attempt.hitBest ? 1 : 0 } : { think: 1 }));
+    },
+    [updateProgress],
+  );
 
   const saveSettings = (s: Settings) => {
     setSettings(s);
@@ -171,7 +182,6 @@ export default function App() {
   const analyzedIds = useMemo(() => new Set(analyses.map((a) => a.id)), [analyses]);
   const unanalyzed = raw.filter((g) => settings.timeClasses.includes(g.timeClass) && !analyzedIds.has(g.id)).length;
   const dueCount = dueCards(cards).length;
-  const daysLeft = Math.max(0, Math.ceil((TOURNAMENT.getTime() - Date.now()) / 86400_000));
   const current = openGame ? analyses.find((a) => a.id === openGame) : undefined;
   const busy = syncing || !!job || queue.length > 0;
 
@@ -181,8 +191,8 @@ export default function App() {
         <div className="brand">
           <span className="logo">♞</span>
           <div>
-            <div className="title">Aasaan</div>
-            <div className="tiny muted">chess coach</div>
+            <div className="title">Chess Aasaan</div>
+            <div className="tiny muted">training for long games</div>
           </div>
         </div>
         <nav>
@@ -198,12 +208,7 @@ export default function App() {
             <span className="navlabel">Settings</span>
           </button>
         </nav>
-        <div className="side-foot">
-          <div className="tiny muted">{settings.username}</div>
-          <div className="side-count">
-            <span className="gold">{daysLeft}</span> days to Madurai
-          </div>
-        </div>
+        <div className="side-foot tiny muted">chess.com · {settings.username}</div>
       </aside>
 
       <div className="content">
@@ -216,7 +221,7 @@ export default function App() {
         {(syncing || job || queue.length > 0) && (
           <div className="banner live">
             <span className="pulse" aria-hidden />
-            {syncing && !job ? 'Fetching your games from chess.com…' : `Coach is reviewing ${queue.length} game${queue.length === 1 ? '' : 's'} with Stockfish (depth ${settings.depth})`}
+            {syncing && !job ? 'Fetching your games from chess.com…' : `Stockfish is checking ${queue.length} game${queue.length === 1 ? '' : 's'} (depth ${settings.depth})`}
             {job && <progress max={job.total} value={job.done} />}
             {queue.length > 0 && <button className="link" onClick={stopQueue}>stop</button>}
           </div>
@@ -228,7 +233,8 @@ export default function App() {
               key={current.id}
               game={current}
               onBack={() => setOpenGame(null)}
-              onChange={updateAnalysis}
+              onChange={(f) => updateAnalysis(current.id, f)}
+              onReviewed={() => updateProgress((p) => log(p, { reviews: 1 }))}
               onRetry={(id) => {
                 setRetryCard(id);
                 setOpenGame(null);
@@ -236,24 +242,21 @@ export default function App() {
                 setTrainMode('puzzles');
               }}
             />
-          ) : tab === 'home' ? (
-            <HomeView
+          ) : tab === 'today' ? (
+            <TodayView
               games={filtered}
               progress={progress}
+              settings={settings}
               dueCount={dueCount}
               unanalyzed={unanalyzed}
-              daysLeft={daysLeft}
               busy={busy}
-              onAction={(a, gameId) => {
-                if (a === 'open' && gameId) setOpenGame(gameId);
-                else if (a === 'puzzles' || a === 'think') {
-                  setTab('train');
-                  setTrainMode(a);
-                } else if (a === 'review') {
-                  const g = filtered.find((x) => x.result !== 'win');
-                  if (g) setOpenGame(g.id);
-                } else if (a === 'analyze') go('games');
+              onOpen={setOpenGame}
+              onTrain={(m) => {
+                setTab('train');
+                setTrainMode(m);
               }}
+              onTab={go}
+              onToggleBlock={(id: BlockId) => updateProgress((p) => toggleBlock(p, id))}
             />
           ) : tab === 'games' ? (
             <GamesView
@@ -281,12 +284,13 @@ export default function App() {
               onResult={onTrainResult}
               onOpen={setOpenGame}
             />
+          ) : tab === 'progress' ? (
+            <ProgressView games={filtered} progress={progress} onOpen={setOpenGame} />
           ) : (
-            <InsightsView games={filtered} onOpen={setOpenGame} />
+            <MethodView />
           )}
         </main>
       </div>
-      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }

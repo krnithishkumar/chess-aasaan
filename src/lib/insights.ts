@@ -167,3 +167,46 @@ export function themeCounts(games: AnalyzedGame[]): { theme: Theme; count: numbe
 }
 
 export { errorsPerGame };
+
+export interface TrendPoint {
+  label: string;
+  games: number;
+  errorsPerGame: number;
+  acpl: number;
+}
+
+/** Are you improving? Your games in chronological groups, oldest first. */
+export function trend(games: AnalyzedGame[], groupSize = 10): TrendPoint[] {
+  const sorted = [...games].sort((a, b) => a.endTime - b.endTime);
+  const out: TrendPoint[] = [];
+  for (let i = 0; i < sorted.length; i += groupSize) {
+    const gs = sorted.slice(i, i + groupSize);
+    if (gs.length < Math.min(groupSize, 5)) break;
+    const moves = gs.flatMap(userMoves);
+    const d = (g: AnalyzedGame) => new Date(g.endTime * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    out.push({
+      label: `${d(gs[0])} – ${d(gs[gs.length - 1])}`,
+      games: gs.length,
+      errorsPerGame: gs.reduce((a, g) => a + errorsPerGame(g), 0) / gs.length,
+      acpl: moves.length ? moves.reduce((a, m) => a + m.cpLoss, 0) / moves.length : 0,
+    });
+  }
+  return out;
+}
+
+/** How often you reached each time-plan checkpoint with enough clock left. */
+export function clockCheckpoints<C extends { move: number; minPct: number }>(games: AnalyzedGame[], checkpoints: C[]) {
+  return checkpoints.map((cp) => {
+    let reached = 0, ok = 0, pctSum = 0;
+    for (const g of games) {
+      if (g.timeClass === 'daily' || !g.baseSeconds) continue;
+      const m = userMoves(g).find((x) => x.moveNo === cp.move && x.clockAfter !== undefined);
+      if (!m) continue;
+      reached++;
+      const pct = m.clockAfter! / g.baseSeconds;
+      pctSum += pct;
+      if (pct >= cp.minPct) ok++;
+    }
+    return { ...cp, reached, ok, avgPct: reached ? pctSum / reached : undefined };
+  });
+}

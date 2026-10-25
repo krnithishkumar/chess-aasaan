@@ -12,7 +12,7 @@ interface Props {
   games: AnalyzedGame[];
   deck: QuizCard[];
   depth: number;
-  onResult: (card: QuizCard, attempt: QuizAttempt, xp: number) => void;
+  onResult: (card: QuizCard, attempt: QuizAttempt) => void;
   onOpen: (gameId: string) => void;
   onExit: () => void;
 }
@@ -32,7 +32,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
   const [fen, setFen] = useState('');
   const [feedback, setFeedback] = useState('');
   const [lastTry, setLastTry] = useState<{ from: Square; to: Square } | null>(null);
-  const [results, setResults] = useState<{ ok: boolean; xp: number }[]>([]);
+  const [results, setResults] = useState<{ ok: boolean }[]>([]);
 
   const card = session[i];
   const found = card ? findMove(games, card) : undefined;
@@ -52,29 +52,26 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
   if (!session.length)
     return (
       <div className="panel empty">
-        <h2>No puzzles due</h2>
-        <p className="muted">Every mistake from your analyzed games becomes a puzzle. Analyze more games, or come back tomorrow when old ones are due again.</p>
+        <h2>Nothing due</h2>
+        <p className="muted">Every mistake from your analysed games becomes a position here. Analyse more games, or come back tomorrow when older ones are due again.</p>
         <button onClick={onExit}>Back</button>
       </div>
     );
 
   if (i >= session.length) {
     const ok = results.filter((r) => r.ok).length;
-    const xp = results.reduce((a, r) => a + r.xp, 0);
     return (
       <div className="panel summary-card">
-        <div className="eyebrow">Session complete</div>
+        <div className="eyebrow">Session finished</div>
         <h1>
           {ok}/{results.length} solved
         </h1>
-        <p className="gold big-xp">+{xp} XP</p>
-        <p className="coach-says">
-          <span className="coach-badge" aria-hidden>♚</span>
+        <p className="lede">
           {ok === results.length
-            ? "Clean sweep. These positions cost you real points once, and now they won't. They'll come back later to check it stuck."
+            ? 'All solved. They come back after a longer gap to check the pattern stuck.'
             : ok >= results.length / 2
-              ? "Decent. The ones you missed come back tomorrow, so don't let them become a pattern."
-              : "Rough session, and that's the point: these are exactly your blind spots. The misses come back tomorrow. Go slower next time and scan checks, captures and threats first."}
+              ? 'The ones you missed come back tomorrow. Missing them here is how you stop missing them in games.'
+              : 'A hard session, which means these really are your blind spots. Next time go slower: checks, captures and threats for both sides before you move.'}
         </p>
         <button className="primary" onClick={onExit}>
           Done
@@ -94,11 +91,10 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
   const orientation = move.color === 'w' ? 'white' : 'black';
 
   const finish = (ok: boolean) => {
-    const xp = ok ? (tries === 0 && !hint ? 15 : 8) : 2;
     const grade: QuizAttempt['grade'] = ok ? (tries === 0 && !hint ? 'got' : 'partial') : 'missed';
     setStatus(ok ? 'solved' : 'failed');
-    setResults((r) => [...r, { ok, xp }]);
-    onResult(card, { at: Date.now(), plan: '', candidates: [], hitBest: ok, grade }, xp);
+    setResults((r) => [...r, { ok }]);
+    onResult(card, { at: Date.now(), plan: '', candidates: [], hitBest: ok, grade });
   };
 
   const onMove = (from: Square, to: Square): boolean => {
@@ -178,7 +174,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
       <div className="trainer-board">
         <div className="puzzle-head">
           <span className="eyebrow">
-            Puzzle {i + 1} of {session.length}
+            Position {i + 1} of {session.length}
           </span>
           <div className="dots">
             {session.map((_, k) => (
@@ -209,7 +205,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
         {!finished ? (
           <div className="row">
             <button onClick={() => setHint(true)} disabled={hint}>
-              💡 Hint
+              Hint
             </button>
             <button onClick={() => setShowMine((s) => !s)}>{showMine ? 'Hide my move' : 'My move'}</button>
             <button onClick={reveal}>Solution</button>
@@ -223,7 +219,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
               You played <strong className="bad-text">{move.san}</strong> → {formatEval(move.evalAfter)}
               {move.replySan && <span className="muted">, punished by {move.replySan}</span>}.
             </p>
-            {move.reason && <p className="small">Coach: {move.reason}.</p>}
+            {move.reason && <p className="small">Why it went wrong: {move.reason}.</p>}
             <div className="chips static">
               {themes.map((t) => (
                 <span key={t} className="chip on">{THEME_LABEL[t]}</span>

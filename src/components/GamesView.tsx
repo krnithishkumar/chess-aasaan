@@ -41,6 +41,13 @@ export default function GamesView({ raw, analyses, settings, syncing, queue, onS
 
   return (
     <section>
+      <header className="page-head">
+        <div>
+          <div className="eyebrow">My games</div>
+          <h1>Your games from chess.com</h1>
+          <p className="lede">Stockfish checks each game in your browser. Then review it yourself before you look at the engine.</p>
+        </div>
+      </header>
       <div className="toolbar">
         <button className="primary" onClick={onSync} disabled={syncing}>
           {syncing ? 'Fetching…' : `Fetch games (${settings.months} mo)`}
@@ -54,7 +61,7 @@ export default function GamesView({ raw, analyses, settings, syncing, queue, onS
         </div>
         <div className="spacer" />
         <button onClick={() => onAnalyze(pending.slice(0, 10).map((g) => g.id))} disabled={!pending.length}>
-          Analyze next 10
+          Analyse next 10
         </button>
       </div>
 
@@ -62,7 +69,7 @@ export default function GamesView({ raw, analyses, settings, syncing, queue, onS
         <div className="empty card">
           <p>No games yet. Hit <strong>Fetch games</strong> to pull your chess.com archive.</p>
           <p className="muted small">
-            Coach's note: analyze your longest games first. Your 10+0 games tell me less about classical than one 30+20 game.
+            Analyse your longest games first. One 30+20 game tells you more about classical play than ten 10+0 games.
           </p>
         </div>
       )}
@@ -94,11 +101,11 @@ export default function GamesView({ raw, analyses, settings, syncing, queue, onS
                     {mi > 0 && <span className="sev mistake">{mi} ?</span>}
                     {!bl && !mi && <span className="muted">clean</span>}
                   </span>
-                  <button onClick={() => onOpen(g.id)}>Review</button>
+                  <button onClick={() => onOpen(g.id)}>{a.review?.stage === 'done' ? 'Open' : 'Review'}</button>
                 </>
               ) : (
                 <button onClick={() => onAnalyze([g.id])} disabled={inQueue}>
-                  {inQueue ? 'Queued' : 'Analyze'}
+                  {inQueue ? 'Queued' : 'Analyse'}
                 </button>
               )}
             </li>

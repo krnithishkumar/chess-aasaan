@@ -131,22 +131,22 @@ const DRILLS: Record<Tag, { headline: string; drill: string }> = {
   calculation: {
     headline: 'Your forcing lines break down.',
     drill:
-      '45 min/day: hard calculation positions (Yusupov Orange/Blue, or puzzles rated 2300+). Write the full line on paper before touching a piece, 10 min cap per position, then check with the engine. Finish with your "calculation" quiz cards here.',
+      '45 min/day: hard calculation positions (Yusupov Orange/Blue, or puzzles rated 2300+). Write the full line on paper before touching a piece, 10 min cap per position, then check with the engine. Finish with the Think trainer here.',
   },
   'tactic missed': {
     headline: "You're missing forcing moves, both yours and your opponent's.",
     drill:
-      '30 min/day of pattern puzzles at 1900-2200 for speed, and in every game do a checks-captures-threats scan for BOTH sides before you press the clock. Drill your "tactic missed" quiz cards until they are boring.',
+      '30 min/day of pattern puzzles at 1900-2200 for speed, and in every game do a checks-captures-threats scan for BOTH sides before you press the clock. Repeat your "tactic missed" mistake drills until they are boring.',
   },
   endgame: {
     headline: 'Endgames are leaking points.',
     drill:
-      "45 min/day: 100 Endgames You Must Know (rook endings first, Lucena/Philidor/Vancura cold). Then play your own endgame quiz positions out vs Stockfish from the losing side. In classical you'll reach many more endgames than in 10+0.",
+      "45 min/day: 100 Endgames You Must Know (rook endings first, Lucena/Philidor/Vancura cold). Then your own endgame mistake drills. In classical you reach many more endgames than in 10+0.",
   },
   'time trouble': {
     headline: "You're living on the increment.",
     drill:
-      'For 90+30 classical, set checkpoints: move 20 with >= 55 min, move 30 with >= 30 min, move 40 with >= 10 min plus the 30s bonus. Play 2-3 games a week at 30+20 or 45+15 and check this tab after every one.',
+      'For 90+30 classical, set checkpoints: move 20 with >= 55 min, move 30 with >= 30 min, move 40 with >= 10 min plus the 30s bonus. Play 2-3 games a week at 30+20 or 45+15 and check the clock section here after every one.',
   },
   opening: {
     headline: 'Errors before move 12.',
@@ -156,7 +156,7 @@ const DRILLS: Record<Tag, { headline: string; drill: string }> = {
   positional: {
     headline: 'Quiet-position misjudgements.',
     drill:
-      '2 annotated master games a week in your structures (guess-the-move, write down a plan every 5 moves). In quiz mode, write the plan before the candidate moves. That habit is the training.',
+      '2 annotated master games a week in your structures (guess-the-move, write down a plan every 5 moves). In the Think trainer, write what the position is about before the candidate moves.',
   },
 };
 
@@ -178,9 +178,9 @@ export function coachAdvice(p: Patterns): { advice: Advice[]; warnings: string[]
   const fast = fastGames.reduce((a, t) => a + t.games, 0);
   if (p.games && fast / p.games > 0.6)
     warnings.push(
-      `${fast} of ${p.games} analyzed games are under 30 min. Classical is 90+30, a different sport. Your time-management and stamina numbers below are mostly blitz habits. Play at least 2 long games a week (30+20 or slower) so this data means something.`,
+      `${fast} of your ${p.games} analysed games are under 30 minutes. Classical is 90+30, a different sport, so the clock and stamina numbers mostly show fast-game habits. Play at least 2-3 long games a week (30+20 or slower) so the data reflects classical play.`,
     );
-  if (p.games < 10) warnings.push(`Only ${p.games} games analyzed. Patterns get trustworthy around 20+.`);
+  if (p.games < 10) warnings.push(`Only ${p.games} game${p.games === 1 ? '' : 's'} analysed so far. Patterns become trustworthy around 20.`);
 
   const advice = p.tagStats
     .filter((t) => t.count > 0)

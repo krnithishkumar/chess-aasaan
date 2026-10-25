@@ -80,6 +80,17 @@ export interface AnalyzedGame {
   depth: number;
   analyzedAt: number;
   moves: MoveRecord[];
+  review?: SelfReview;
+}
+
+/** Your own review of a game, done before looking at the engine. */
+export interface SelfReview {
+  stage: 'self' | 'engine' | 'done';
+  /** Plies you marked as turning points before seeing the engine. */
+  critical: number[];
+  notes: Record<number, string>;
+  lesson?: string;
+  doneAt?: number;
 }
 
 export interface QuizAttempt {
@@ -104,6 +115,7 @@ export interface Settings {
   depth: number;
   months: number;
   timeClasses: string[];
+  hoursPerDay: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -111,6 +123,7 @@ export const DEFAULT_SETTINGS: Settings = {
   depth: 16,
   months: 3,
   timeClasses: ['rapid', 'daily'],
+  hoursPerDay: 4,
 };
 
 export function tagsOf(m: MoveRecord): Tag[] {

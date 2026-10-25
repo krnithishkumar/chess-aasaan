@@ -16,7 +16,7 @@ interface Props {
   mode: TrainMode | null;
   startWith: string | null;
   onMode: (m: TrainMode | null) => void;
-  onResult: (card: QuizCard, attempt: QuizAttempt, xp: number, mode: TrainMode) => void;
+  onResult: (card: QuizCard, attempt: QuizAttempt, mode: TrainMode) => void;
   onOpen: (gameId: string) => void;
 }
 
@@ -59,7 +59,7 @@ export default function TrainView({ games, cards, depth, mode, startWith, onMode
         games={games}
         deck={deck}
         depth={depth}
-        onResult={(c, a, xp) => onResult(c, a, xp, mode)}
+        onResult={(c, a) => onResult(c, a, mode)}
         onOpen={onOpen}
         onExit={() => {
           setSessionKey((k) => k + 1);
@@ -77,14 +77,15 @@ export default function TrainView({ games, cards, depth, mode, startWith, onMode
     <section>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Train</div>
-          <h1>Your blunders, turned into homework</h1>
+          <div className="eyebrow">Drills</div>
+          <h1>Practise on your own mistakes</h1>
+          <p className="lede">Every mistake and blunder from your analysed games becomes a position to solve. Positions you get right come back after longer and longer gaps (1, 3, 7, 21, 60 days). Misses come back tomorrow.</p>
         </div>
       </div>
       <div className="deckstats">
         <div><span className="big">{all.length}</span> positions</div>
         <div><span className="big gold">{due}</span> due today</div>
-        <div><span className="big">{mastered}</span> mastered</div>
+        <div><span className="big">{mastered}</span> solved 3+ times in a row</div>
       </div>
 
       <label className="focus">
@@ -116,16 +117,16 @@ export default function TrainView({ games, cards, depth, mode, startWith, onMode
 
       <div className="modes">
         <button className="mode-card" onClick={() => onMode('puzzles')} disabled={!deck.length}>
-          <div className="mode-icon">♞</div>
-          <h2>Blunder Book</h2>
-          <p>Play the move you should have played. Hint, My Move, Solution. 10 positions per session, and the misses come back sooner.</p>
-          <span className="mode-meta">{deck.length ? `${Math.min(10, deck.length)} ready · up to 15 XP each` : 'Nothing to train yet'}</span>
+          <div className="mode-icon">♘</div>
+          <h2>Mistake drills</h2>
+          <p>Find the move you should have played. 10 positions a session, 3 tries each. Quick pattern practice for the tactics block.</p>
+          <span className="mode-meta">{deck.length ? `${Math.min(10, deck.length)} positions ready` : 'Analyse some games first'}</span>
         </button>
         <button className="mode-card" onClick={() => onMode('think')} disabled={!deck.length}>
-          <div className="mode-icon">⏱</div>
-          <h2>Classical think</h2>
-          <p>A clock runs. Write a plan and your candidates like it's 90+30, then Stockfish judges each candidate. Your real gap.</p>
-          <span className="mode-meta">{deck.length ? 'up to 20 XP each' : 'Nothing to train yet'}</span>
+          <div className="mode-icon">♗</div>
+          <h2>Think trainer</h2>
+          <p>Slow, like a classical game. Go through the 5-step check, write your candidates and your choice, then Stockfish checks every one.</p>
+          <span className="mode-meta">{deck.length ? 'About 5-10 minutes a position' : 'Analyse some games first'}</span>
         </button>
       </div>
     </section>
