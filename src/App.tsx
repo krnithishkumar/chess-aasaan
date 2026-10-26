@@ -6,6 +6,7 @@ import type { BlockId } from './lib/curriculum';
 import { log, toggleBlock, type Progress, EMPTY_PROGRESS } from './lib/progress';
 import { dueCards, grade, syncCards } from './lib/quiz';
 import * as store from './lib/store';
+import { setSoundEnabled } from './lib/sound';
 import type { AnalyzedGame, QuizAttempt, QuizCard, RawGame, Settings } from './lib/types';
 import { DEFAULT_SETTINGS } from './lib/types';
 import GamesView from './components/GamesView';
@@ -97,6 +98,8 @@ export default function App() {
       sync(s, new Set(an.map((a) => a.id)));
     })();
   }, [sync]);
+
+  useEffect(() => setSoundEnabled(settings.sound), [settings.sound]);
 
   // Analysis loop: one game at a time through the shared engine.
   useEffect(() => {

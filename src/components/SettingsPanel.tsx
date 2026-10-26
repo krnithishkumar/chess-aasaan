@@ -44,6 +44,10 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
           ))}
         </select>
       </label>
+      <label className="check">
+        <input type="checkbox" checked={settings.sound} onChange={(e) => onChange({ ...settings, sound: e.target.checked })} />
+        Move sounds
+      </label>
       <p className="muted small">
         Depth applies to new analyses. Everything is stored in this browser only.
       </p>

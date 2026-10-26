@@ -22,6 +22,8 @@ No countdowns, XP, levels or streaks. Progress is measured by Stockfish's verdic
 - **Today**: the session for today in blocks, with buttons into the in-app tools and ticks for off-screen work (books, long games). What your games say, your rules, games waiting for review.
 - **My games**: fetch from chess.com and analyse (Stockfish 18 lite WASM, depth 16 default).
 - **Game review**, in 3 steps: (1) your analysis with the engine hidden: mark turning points and write what you thought; (2) compare: "you found X of Y" against the engine's swings, then the mistakes with tags you can correct; (3) one rule, collected on Today.
+- **On the board**: in game review (after your own analysis) every move gets a badge on its square (Best ★, Excellent !, Good ✓, Inaccuracy ?!, Mistake ?, Blunder ??) and a one-line insight above the board, with a "Show best move" toggle. Drill attempts get the same badge.
+- **Sounds**: soft synthesized move, capture and check sounds plus drill feedback (`src/lib/sound.ts`, Web Audio, no sound files). Can be turned off in Settings.
 - **Drills**: every mistake or blunder becomes a spaced-repetition position (1, 3, 7, 21, 60 days).
   - *Mistake drills*: find the move you should have played, 3 tries; a move within 3 win% of best counts.
   - *Think trainer*: the 5-step check written out, your choice and every candidate checked by Stockfish and graded automatically.

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Chess, type Square } from 'chess.js';
-import { evalToCp, formatEval, winPct } from '../lib/analyze';
+import { evalToCp, formatEval, qualityOfLoss, winPct, type Quality } from '../lib/analyze';
 import { getEngine } from '../lib/engine';
 import { findMove } from '../lib/quiz';
+import { playResult } from '../lib/sound';
 import { THEME_LABEL, themesOf } from '../lib/themes';
 import type { AnalyzedGame, QuizAttempt, QuizCard } from '../lib/types';
 import { tagsOf } from '../lib/types';
@@ -31,7 +32,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
   const [showMine, setShowMine] = useState(false);
   const [fen, setFen] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [lastTry, setLastTry] = useState<{ from: Square; to: Square } | null>(null);
+  const [lastTry, setLastTry] = useState<{ from: Square; to: Square; quality?: Quality } | null>(null);
   const [results, setResults] = useState<{ ok: boolean }[]>([]);
 
   const card = session[i];
@@ -94,6 +95,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
     const grade: QuizAttempt['grade'] = ok ? (tries === 0 && !hint ? 'got' : 'partial') : 'missed';
     setStatus(ok ? 'solved' : 'failed');
     setResults((r) => [...r, { ok }]);
+    playResult(ok);
     onResult(card, { at: Date.now(), plan: '', candidates: [], hitBest: ok, grade });
   };
 
@@ -110,11 +112,13 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
     setFen(c.fen());
     setLastTry({ from, to });
     if (uci === best) {
+      setLastTry({ from, to, quality: 'best' });
       setFeedback(`${m.san}! That's the engine's move.`);
       finish(true);
       return true;
     }
     if (uci === move.uci) {
+      setLastTry({ from, to, quality: move.severity });
       setFeedback(`${m.san} is what you played in the game. Same mistake. Look again.`);
       wrong();
       return true;
@@ -126,7 +130,9 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
       .then((e) => {
         const w = winPct(evalToCp(e));
         const mine = move.color === 'w' ? w : 100 - w;
-        if (move.winBefore - mine <= TOLERANCE) {
+        const loss = Math.max(0, move.winBefore - mine);
+        setLastTry({ from, to, quality: qualityOfLoss(loss) });
+        if (loss <= TOLERANCE) {
           setFeedback(`${m.san} works too (${formatEval(e)}). Engine's first choice was ${move.bestSan}.`);
           finish(true);
         } else {
@@ -145,6 +151,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
       return;
     }
     setStatus('wrong');
+    playResult(false);
     setTimeout(() => {
       setFen(move.fenBefore);
       setLastTry(null);
@@ -153,6 +160,7 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
 
   const reveal = () => {
     setFen(move.fenBefore);
+    setLastTry(null);
     setFeedback(`The move was ${move.bestSan}.`);
     finish(false);
   };
@@ -182,7 +190,14 @@ export default function BlunderBook({ games, deck, depth, onResult, onOpen, onEx
             ))}
           </div>
         </div>
-        <Board fen={fen || move.fenBefore} orientation={orientation} arrows={finished ? arrows : showMine ? arrows : []} onMove={finished ? undefined : onMove} highlight={highlight} />
+        <Board
+          fen={fen || move.fenBefore}
+          orientation={orientation}
+          arrows={finished ? arrows : showMine ? arrows : []}
+          onMove={finished ? undefined : onMove}
+          highlight={highlight}
+          badge={lastTry?.quality ? { square: lastTry.to, quality: lastTry.quality } : undefined}
+        />
       </div>
 
       <div className="trainer-side panel">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fmtClock, formatEval, userMoves } from '../lib/analyze';
+import { fmtClock, formatEval, moveInsight, QUALITY, qualityOf, userMoves } from '../lib/analyze';
 import { formatTimeControl } from '../lib/chesscom';
 import { gameVerdict } from '../lib/coach';
 import { gameForCoach } from '../lib/coachExport';
@@ -8,6 +8,7 @@ import { cardId } from '../lib/quiz';
 import { THEME_LABEL, themesOf } from '../lib/themes';
 import type { AnalyzedGame, MoveRecord, SelfReview, Tag } from '../lib/types';
 import { TAGS, tagsOf } from '../lib/types';
+import type { Square } from 'chess.js';
 import Board, { ARROW, uciArrow } from './Board';
 import CopyButton from './CopyButton';
 import EvalGraph from './EvalGraph';
@@ -28,6 +29,7 @@ const mv = (m: MoveRecord) => `${m.moveNo}${m.color === 'w' ? '.' : '...'}${m.sa
 /** Two-stage review: you analyse the game yourself first (engine hidden), then compare with Stockfish. */
 export default function GameView({ game, onBack, onChange, onReviewed, onRetry }: Props) {
   const [ply, setPly] = useState(-1);
+  const [showBest, setShowBest] = useState(false);
   const review = game.review ?? EMPTY_REVIEW;
   const engineOn = review.stage !== 'self';
   const move = ply >= 0 ? game.moves[ply] : undefined;
@@ -43,6 +45,7 @@ export default function GameView({ game, onBack, onChange, onReviewed, onRetry }
   );
   const spotted = (m: MoveRecord) => review.critical.some((p) => Math.abs(p - m.ply) <= 1);
 
+  useEffect(() => setShowBest(false), [ply]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'TEXTAREA' || (e.target as HTMLElement).tagName === 'INPUT') return;
@@ -67,10 +70,32 @@ export default function GameView({ game, onBack, onChange, onReviewed, onRetry }
   const toggleCritical = (p: number) =>
     setReview((r) => ({ critical: r.critical.includes(p) ? r.critical.filter((x) => x !== p) : [...r.critical, p].sort((a, b) => a - b) }));
 
-  const showArrows = engineOn && move?.severity;
-  const arrows = showArrows ? [uciArrow(move!.uci, ARROW.played), ...(move!.evalBefore.best ? [uciArrow(move!.evalBefore.best, ARROW.best)] : [])] : [];
-  // With arrows, show the position *before* the flagged move so they make sense.
+  const quality = engineOn && move ? qualityOf(move) : undefined;
+  // "Show best move" steps back to the position before the move, with your move (red) and the engine's (green).
+  const showArrows = engineOn && move && showBest && move.evalBefore.best;
+  const arrows = showArrows ? [uciArrow(move!.uci, ARROW.played), uciArrow(move!.evalBefore.best!, ARROW.best)] : [];
   const boardFen = showArrows ? move!.fenBefore : move ? move.fenAfter : (game.moves[0]?.fenBefore ?? 'start');
+  const lastMove = move && !showArrows ? { [move.uci.slice(0, 2)]: 'last', [move.uci.slice(2, 4)]: 'last' } : {};
+  const caption =
+    move && quality ? (
+      <div className={`insight q-${quality}`}>
+        <span className="insight-mark" aria-hidden>
+          {QUALITY[quality].mark}
+        </span>
+        <span className="grow">
+          <strong>
+            {mv(move)} · {QUALITY[quality].label}
+          </strong>{' '}
+          <span className="insight-who">{move.color === game.userColor ? 'you' : game.opponent}</span>
+          <span className="insight-text">{moveInsight(move)}</span>
+        </span>
+        {move.evalBefore.best && move.evalBefore.best !== move.uci && (
+          <button className="chip" onClick={() => setShowBest((b) => !b)}>
+            {showBest ? 'Back to move' : 'Show best move'}
+          </button>
+        )}
+      </div>
+    ) : undefined;
   const totalTime = (c: 'w' | 'b') => game.moves.filter((m) => m.color === c).reduce((a, m) => a + (m.timeSpent ?? 0), 0);
   const hasClock = game.moves[0]?.clockAfter !== undefined && game.timeClass !== 'daily';
 
@@ -181,7 +206,14 @@ export default function GameView({ game, onBack, onChange, onReviewed, onRetry }
 
       <div className="review">
         <div className="col-board">
-          <Board fen={boardFen} orientation={game.userColor === 'w' ? 'white' : 'black'} arrows={arrows} />
+          <Board
+            fen={boardFen}
+            orientation={game.userColor === 'w' ? 'white' : 'black'}
+            arrows={arrows}
+            highlight={lastMove}
+            badge={move && quality && !showArrows ? { square: move.uci.slice(2, 4) as Square, quality } : undefined}
+            caption={caption}
+          />
           <div className="navbtns">
             <button onClick={() => setPly(-1)} aria-label="Start">⏮</button>
             <button onClick={() => setPly((p) => Math.max(-1, p - 1))} aria-label="Previous move">◀</button>
@@ -247,7 +279,7 @@ export default function GameView({ game, onBack, onChange, onReviewed, onRetry }
                   }}
                 />
               )}
-              {showArrows && <div className="tiny muted">Red arrow: your move. Green: the engine's move. Board shows the position before.</div>}
+              {showArrows && <div className="tiny muted">Red arrow: the move played. Green: the engine's move. The board shows the position before it.</div>}
             </div>
           )}
           {hasClock && (

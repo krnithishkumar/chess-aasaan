@@ -116,6 +116,7 @@ export interface Settings {
   months: number;
   timeClasses: string[];
   hoursPerDay: number;
+  sound: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -124,6 +125,7 @@ export const DEFAULT_SETTINGS: Settings = {
   months: 3,
   timeClasses: ['rapid', 'daily'],
   hoursPerDay: 4,
+  sound: true,
 };
 
 export function tagsOf(m: MoveRecord): Tag[] {

@@ -234,3 +234,41 @@ export function openingName(pgn: string): string | undefined {
 export function userMoves(g: AnalyzedGame): MoveRecord[] {
   return g.moves.filter((m) => m.color === g.userColor);
 }
+
+export type Quality = 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+
+/** How good a move was, from the win% it lost (same thresholds as severity, plus the good end). */
+export function qualityOf(m: Pick<MoveRecord, 'uci' | 'loss' | 'severity' | 'evalBefore'>): Quality {
+  if (m.severity) return m.severity;
+  if (m.evalBefore.best === m.uci) return 'best';
+  return m.loss < 2 ? 'excellent' : 'good';
+}
+
+/** Same as qualityOf, for a move you tried in a drill (only its win% loss is known). */
+export function qualityOfLoss(loss: number, isBest = false): Quality {
+  if (isBest) return 'best';
+  if (loss >= 15) return 'blunder';
+  if (loss >= 10) return 'mistake';
+  if (loss >= 5) return 'inaccuracy';
+  return loss < 2 ? 'excellent' : 'good';
+}
+
+export const QUALITY: Record<Quality, { label: string; mark: string }> = {
+  best: { label: 'Best move', mark: '★' },
+  excellent: { label: 'Excellent', mark: '!' },
+  good: { label: 'Good', mark: '✓' },
+  inaccuracy: { label: 'Inaccuracy', mark: '?!' },
+  mistake: { label: 'Mistake', mark: '?' },
+  blunder: { label: 'Blunder', mark: '??' },
+};
+
+/** One plain sentence about a move, from the engine numbers only. */
+export function moveInsight(m: MoveRecord): string {
+  const q = qualityOf(m);
+  const swing = `${formatEval(m.evalBefore)} → ${formatEval(m.evalAfter)}`;
+  if (q === 'best') return `${m.san} is the engine's top choice.`;
+  if (q === 'excellent' || q === 'good')
+    return `${m.san} keeps the position${m.bestSan ? `. The engine slightly preferred ${m.bestSan}` : ''}.`;
+  const why = m.reason ? ` ${m.reason.charAt(0).toUpperCase()}${m.reason.slice(1)}.` : '';
+  return `${m.san} lets the position slip (${swing}).${why}${m.bestSan ? ` Best was ${m.bestSan}.` : ''}`;
+}
